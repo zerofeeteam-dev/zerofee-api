@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { protos } from '@google-analytics/data';
-import client, { propertyId } from '@/lib/ga4';
+import { getGa4Client, getPropertyId } from '@/lib/ga4';
 import {
   BatchRunReportsRequest,
   BatchRunReportsResponse,
@@ -19,6 +19,8 @@ export async function GET(req: NextRequest) {
 
   if (!creator) return NextResponse.json({ error: 'creator required' }, { status: 400 });
 
+  const client = getGa4Client();
+  const propertyId = getPropertyId();
   const [response] = await (client.batchRunReports({
     property: `properties/${propertyId}`,
     requests: [

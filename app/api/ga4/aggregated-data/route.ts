@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { protos } from '@google-analytics/data';
-import client, { propertyId } from '@/lib/ga4';
+import { getGa4Client, getPropertyId } from '@/lib/ga4';
 import type { BatchRunReportsRequest, BatchRunReportsResponse } from '@/lib/ga4-reports';
 import { buildDateRange, buildViewItemFilter, getStringParam, reportRowsToObjects, reportTotalsToObject, withSharePercent } from '@/lib/ga4-reports';
 
@@ -25,6 +25,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'creator_id required' }, { status: 400 });
   }
 
+  const client = getGa4Client();
+  const propertyId = getPropertyId();
   const viewItemFilter = buildViewItemFilter(creatorId, productId);
 
   const responseTuple = (await (client.batchRunReports({
