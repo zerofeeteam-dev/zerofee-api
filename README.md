@@ -1,4 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is a [Next.js](https://nextjs.org) project that proxies GA4 reporting data for Bubble.io.
+
+## GA4 Endpoints
+
+The app expects these environment variables:
+
+- `GA4_PROPERTY_ID`
+- `GA4_SERVICE_ACCOUNT_JSON`
+
+Available routes:
+
+- `POST /api/ga4/batch-run-reports`
+  - Accepts a GA4 `batchRunReports`-style body with a `requests` array.
+  - Returns the raw GA4 batch response plus `propertyId`.
+- `GET /api/ga4/aggregated-data`
+  - Query params: `creator_id`, optional `product_id`, optional `start_date`, optional `end_date`
+  - Defaults to `start_date=30daysAgo` and `end_date=today` when omitted.
+  - Returns `view_item` summary metrics and traffic sources.
+- `GET /api/ga4/day-data-source`
+  - Query params: `creator_id`, optional `product_id`, optional `start_date`, optional `end_date`
+  - Defaults to `start_date=30daysAgo` and `end_date=today` when omitted.
+  - Returns daily `view_item` summary metrics and daily source breakdown for the full requested range.
+- `GET /api/ga4/dashboard`
+  - Query params: `creator_id`, optional `product_id`, optional `start_date`, optional `end_date`
+  - Returns summary, traffic sources, daily metrics, and daily source breakdown in one response.
+
+Example:
+
+```text
+/api/ga4/aggregated-data?creator_id=abc&product_id=123&start_date=2026-04-01&end_date=2026-04-24
+```
+
+Single-call dashboard example:
+
+```text
+/api/ga4/dashboard?creator_id=abc&product_id=123&start_date=2026-04-01&end_date=2026-04-24
+```
+
+## Event Shape
+
+Bubble should send:
+
+```js
+gtag('event', 'view_item', {
+  creator_id: '...',
+  product_id: '...'
+});
+
+gtag('event', 'begin_checkout', {
+  creator_id: '...',
+  product_id: '...'
+});
+```
+
+Important:
+
+- The API currently reports on `view_item` data.
+- `creator_id` and `product_id` must be registered as event-scoped custom dimensions in GA4 before the API can query them.
+- Purchase conversion rate is intentionally left to Bubble data, not GA4.
 
 ## Getting Started
 

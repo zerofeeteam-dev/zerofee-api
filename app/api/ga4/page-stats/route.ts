@@ -1,55 +1,96 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { protos } from '@google-analytics/data';
 import client, { propertyId } from '@/lib/ga4';
+import {
+  BatchRunReportsRequest,
+  BatchRunReportsResponse,
+  getStringParam,
+  reportRowsToObjects,
+  reportTotalsToObject,
+} from '@/lib/ga4-reports';
+
+export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
-  const creator = req.nextUrl.searchParams.get('creator');
+  const creator = getStringParam(req.nextUrl, 'creator');
+  const startDate = getStringParam(req.nextUrl, 'start_date') ?? '30daysAgo';
+  const endDate = getStringParam(req.nextUrl, 'end_date') ?? 'today';
+  const paymentSuccessPath = getStringParam(req.nextUrl, 'payment_success_path');
+
   if (!creator) return NextResponse.json({ error: 'creator required' }, { status: 400 });
 
-  const pathFilter = `/product/${creator}-`;
-
-  const [statsRes, sourcesRes] = await Promise.all([
-    client.runReport({
-      property: `properties/${propertyId}`,
-      dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
-      dimensionFilter: {
-        filter: {
+  const [response] = await (client.batchRunReports({
+    property: `properties/${propertyId}`,
+    requests: [
+      {
+        dateRanges: [{ startDate, endDate }],
+        dimensions: [{ name: 'pagePath' }],
+        metrics: [{ name: 'activeUsers' }, { name: 'userEngagementDuration' }],
+        dimensionFilter: {
+          filter: {
           fieldName: 'pagePath',
-          stringFilter: { matchType: 'BEGINS_WITH', value: pathFilter },
+          stringFilter: {
+            matchType: protos.google.analytics.data.v1beta.Filter.StringFilter.MatchType.CONTAINS,
+            value: creator,
+          },
+          },
+        },
+        metricAggregations: [protos.google.analytics.data.v1beta.MetricAggregation.TOTAL],
+      },
+      ...(paymentSuccessPath
+        ? [
+            {
+              dateRanges: [{ startDate, endDate }],
+              dimensions: [{ name: 'pagePath' }],
+              metrics: [{ name: 'activeUsers' }],
+              dimensionFilter: {
+                filter: {
+                  fieldName: 'pagePath',
+                  stringFilter: {
+                    matchType: protos.google.analytics.data.v1beta.Filter.StringFilter.MatchType.CONTAINS,
+                    value: paymentSuccessPath,
+                  },
+                },
+              },
+              metricAggregations: [protos.google.analytics.data.v1beta.MetricAggregation.TOTAL],
+            },
+          ]
+        : []),
+      {
+        dateRanges: [{ startDate, endDate }],
+        dimensions: [{ name: 'sessionSource' }],
+        metrics: [{ name: 'activeUsers' }],
+        dimensionFilter: {
+          filter: {
+          fieldName: 'pagePath',
+          stringFilter: {
+            matchType: protos.google.analytics.data.v1beta.Filter.StringFilter.MatchType.CONTAINS,
+            value: creator,
+          },
+          },
         },
       },
-      metrics: [
-        { name: 'screenPageViews' },
-        { name: 'activeUsers' },
-        { name: 'averageSessionDuration' },
-        { name: 'bounceRate' },
-      ],
-    }),
-    client.runReport({
-      property: `properties/${propertyId}`,
-      dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
-      dimensions: [{ name: 'sessionSource' }],
-      metrics: [{ name: 'sessions' }],
-      dimensionFilter: {
-        filter: {
-          fieldName: 'pagePath',
-          stringFilter: { matchType: 'BEGINS_WITH', value: pathFilter },
-        },
-      },
-      orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
-    }),
-  ]);
+    ],
+  }) as Promise<[BatchRunReportsResponse, BatchRunReportsRequest | undefined, {} | undefined]>);
 
-  const stats = statsRes[0].rows?.[0]?.metricValues;
-  const sources = sourcesRes[0].rows?.map(row => ({
-    source: row.dimensionValues?.[0]?.value,
-    sessions: row.metricValues?.[0]?.value,
-  }));
+  const creatorReport = response.reports?.[0];
+  const paymentReport = paymentSuccessPath ? response.reports?.[1] : undefined;
+  const sourceReport = response.reports?.[paymentSuccessPath ? 2 : 1];
 
   return NextResponse.json({
-    pageViews: stats?.[0]?.value,
-    activeUsers: stats?.[1]?.value,
-    avgSessionDuration: stats?.[2]?.value,
-    bounceRate: stats?.[3]?.value,
-    trafficSources: sources,
+    propertyId,
+    request: {
+      startDate,
+      endDate,
+      creator,
+      paymentSuccessPath,
+    },
+    aggregatedData: {
+      creatorPages: reportRowsToObjects(creatorReport, ['pagePath'], ['activeUsers', 'userEngagementDuration']),
+      creatorTotals: reportTotalsToObject(creatorReport, ['activeUsers', 'userEngagementDuration']),
+      paymentSuccessPages: reportRowsToObjects(paymentReport, ['pagePath'], ['activeUsers']),
+      paymentSuccessTotals: reportTotalsToObject(paymentReport, ['activeUsers']),
+      trafficSources: reportRowsToObjects(sourceReport, ['sessionSource'], ['activeUsers']),
+    },
   });
 }
