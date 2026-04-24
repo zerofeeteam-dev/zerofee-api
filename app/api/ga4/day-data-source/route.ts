@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import client, { propertyId } from '@/lib/ga4';
 import type { BatchRunReportsRequest, BatchRunReportsResponse } from '@/lib/ga4-reports';
-import { buildDateRange, buildViewItemFilter, getStringParam, normalizeDate, reportRowsToObjects } from '@/lib/ga4-reports';
+import { buildDateRange, buildViewItemFilter, fillDailyRows, fillDailySourceRows, getStringParam, reportRowsToObjects } from '@/lib/ga4-reports';
 
 export const runtime = 'nodejs';
 
@@ -58,6 +58,11 @@ export async function GET(req: NextRequest) {
 
   const dailySummaryReport = response.reports?.[0];
   const dailySourceReport = response.reports?.[1];
+  const dailyMetrics = fillDailyRows(dailySummaryReport, dateRange, ['activeUsers', 'averageSessionDuration', 'bounceRate']);
+  const sourceNames = Array.from(
+    new Set(reportRowsToObjects(dailySourceReport, ['date', 'sessionSource'], ['activeUsers']).map(row => String(row.sessionSource)))
+  ).filter((source): source is string => Boolean(source));
+  const dailySourceBreakdown = fillDailySourceRows(dailySourceReport, dateRange, sourceNames);
 
   return NextResponse.json({
     propertyId,
@@ -68,13 +73,7 @@ export async function GET(req: NextRequest) {
       productId,
       eventName: 'view_item',
     },
-    dailyMetrics: reportRowsToObjects(dailySummaryReport, ['date'], ['activeUsers', 'averageSessionDuration', 'bounceRate']).map(row => ({
-      ...row,
-      date: typeof row.date === 'string' ? normalizeDate(row.date) : row.date,
-    })),
-    dailySourceBreakdown: reportRowsToObjects(dailySourceReport, ['date', 'sessionSource'], ['activeUsers']).map(row => ({
-      ...row,
-      date: typeof row.date === 'string' ? normalizeDate(row.date) : row.date,
-    })),
+    dailyMetrics,
+    dailySourceBreakdown,
   });
 }

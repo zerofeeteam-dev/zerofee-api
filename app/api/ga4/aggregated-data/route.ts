@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { protos } from '@google-analytics/data';
 import client, { propertyId } from '@/lib/ga4';
 import type { BatchRunReportsRequest, BatchRunReportsResponse } from '@/lib/ga4-reports';
-import { buildDateRange, buildViewItemFilter, getStringParam, reportRowsToObjects, reportTotalsToObject } from '@/lib/ga4-reports';
+import { buildDateRange, buildViewItemFilter, getStringParam, reportRowsToObjects, reportTotalsToObject, withSharePercent } from '@/lib/ga4-reports';
 
 export const runtime = 'nodejs';
 
@@ -70,6 +70,8 @@ export async function GET(req: NextRequest) {
       eventName: 'view_item',
     },
     summary: summaryTotals,
-    trafficSources: reportRowsToObjects(sourceReport, ['sessionSource'], ['activeUsers']),
+    trafficSources: withSharePercent(reportRowsToObjects(sourceReport, ['sessionSource'], ['activeUsers'])).filter(
+      row => Boolean(row.sessionSource)
+    ),
   });
 }

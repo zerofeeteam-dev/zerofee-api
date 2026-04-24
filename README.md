@@ -15,14 +15,16 @@ Available routes:
 - `GET /api/ga4/aggregated-data`
   - Query params: `creator_id`, optional `product_id`, optional `start_date`, optional `end_date`
   - Defaults to `start_date=30daysAgo` and `end_date=today` when omitted.
-  - Returns `view_item` summary metrics and traffic sources.
+  - Returns `view_item` summary metrics and traffic sources with share percentages.
 - `GET /api/ga4/day-data-source`
   - Query params: `creator_id`, optional `product_id`, optional `start_date`, optional `end_date`
   - Defaults to `start_date=30daysAgo` and `end_date=today` when omitted.
   - Returns daily `view_item` summary metrics and daily source breakdown for the full requested range.
+  - Missing dates are zero-filled so charts can render a continuous series.
 - `GET /api/ga4/dashboard`
   - Query params: `creator_id`, optional `product_id`, optional `start_date`, optional `end_date`
-  - Returns summary, traffic sources, daily metrics, and daily source breakdown in one response.
+  - Returns summary, traffic sources with share percentages, daily metrics, and daily source breakdown in one response.
+  - Missing dates are zero-filled so charts can render a continuous series.
 
 Example:
 

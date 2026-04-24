@@ -5,10 +5,12 @@ import type { BatchRunReportsRequest, BatchRunReportsResponse } from '@/lib/ga4-
 import {
   buildDateRange,
   buildViewItemFilter,
+  fillDailyRows,
+  fillDailySourceRows,
   getStringParam,
-  normalizeDate,
   reportRowsToObjects,
   reportTotalsToObject,
+  withSharePercent,
 } from '@/lib/ga4-reports';
 
 export const runtime = 'nodejs';
@@ -83,6 +85,17 @@ export async function GET(req: NextRequest) {
   const sourceReport = response.reports?.[1];
   const dailySummaryReport = response.reports?.[2];
   const dailySourceReport = response.reports?.[3];
+  const trafficSources = withSharePercent(reportRowsToObjects(sourceReport, ['sessionSource'], ['activeUsers'])).filter(
+    row => Boolean(row.sessionSource)
+  );
+  const dailyMetrics = fillDailyRows(dailySummaryReport, dateRange, ['activeUsers', 'averageSessionDuration', 'bounceRate']);
+  const dailySourceBreakdown = fillDailySourceRows(
+    dailySourceReport,
+    dateRange,
+    trafficSources
+      .map(row => row.sessionSource)
+      .filter((sessionSource): sessionSource is string => Boolean(sessionSource))
+  );
 
   return NextResponse.json({
     propertyId,
@@ -94,14 +107,8 @@ export async function GET(req: NextRequest) {
       eventName: 'view_item',
     },
     summary: reportTotalsToObject(summaryReport, ['activeUsers', 'averageSessionDuration', 'bounceRate']),
-    trafficSources: reportRowsToObjects(sourceReport, ['sessionSource'], ['activeUsers']),
-    dailyMetrics: reportRowsToObjects(dailySummaryReport, ['date'], ['activeUsers', 'averageSessionDuration', 'bounceRate']).map(row => ({
-      ...row,
-      date: typeof row.date === 'string' ? normalizeDate(row.date) : row.date,
-    })),
-    dailySourceBreakdown: reportRowsToObjects(dailySourceReport, ['date', 'sessionSource'], ['activeUsers']).map(row => ({
-      ...row,
-      date: typeof row.date === 'string' ? normalizeDate(row.date) : row.date,
-    })),
+    trafficSources,
+    dailyMetrics,
+    dailySourceBreakdown,
   });
 }
