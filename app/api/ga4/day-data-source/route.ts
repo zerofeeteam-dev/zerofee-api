@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireApiToken } from '@/lib/api-auth';
 import { getGa4Client, getPropertyId } from '@/lib/ga4';
 import type { BatchRunReportsRequest, BatchRunReportsResponse } from '@/lib/ga4-reports';
 import { buildDateRange, buildViewItemFilter, fillDailyRows, fillDailySourceRows, getStringParam, reportRowsToObjects } from '@/lib/ga4-reports';
@@ -14,6 +15,9 @@ function getProductId(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const authError = requireApiToken(req);
+  if (authError) return authError;
+
   const creatorId = getCreatorId(req);
   const productId = getProductId(req);
   const startDate = getStringParam(req.nextUrl, 'start_date');
@@ -35,7 +39,7 @@ export async function GET(req: NextRequest) {
         dateRanges: [dateRange],
         dimensions: [{ name: 'date' }],
         metrics: [
-          { name: 'activeUsers' },
+          { name: 'sessions' },
           { name: 'averageSessionDuration' },
           { name: 'bounceRate' },
         ],
@@ -45,7 +49,7 @@ export async function GET(req: NextRequest) {
       {
         dateRanges: [dateRange],
         dimensions: [{ name: 'date' }, { name: 'sessionSource' }],
-        metrics: [{ name: 'activeUsers' }],
+        metrics: [{ name: 'sessions' }],
         dimensionFilter: viewItemFilter,
         orderBys: [{ dimension: { dimensionName: 'date' }, desc: true }],
       },
@@ -60,9 +64,9 @@ export async function GET(req: NextRequest) {
 
   const dailySummaryReport = response.reports?.[0];
   const dailySourceReport = response.reports?.[1];
-  const dailyMetrics = fillDailyRows(dailySummaryReport, dateRange, ['activeUsers', 'averageSessionDuration', 'bounceRate']);
+  const dailyMetrics = fillDailyRows(dailySummaryReport, dateRange, ['sessions', 'averageSessionDuration', 'bounceRate']);
   const sourceNames = Array.from(
-    new Set(reportRowsToObjects(dailySourceReport, ['date', 'sessionSource'], ['activeUsers']).map(row => String(row.sessionSource)))
+    new Set(reportRowsToObjects(dailySourceReport, ['date', 'sessionSource'], ['sessions']).map(row => String(row.sessionSource)))
   ).filter((source): source is string => Boolean(source));
   const dailySourceBreakdown = fillDailySourceRows(dailySourceReport, dateRange, sourceNames);
 

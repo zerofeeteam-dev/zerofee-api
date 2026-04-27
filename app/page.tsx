@@ -13,25 +13,25 @@ type DashboardResponse = {
     eventName?: string;
   };
   summary?: {
-    activeUsers?: string;
+    sessions?: string;
     averageSessionDuration?: string;
     bounceRate?: string;
   };
   trafficSources?: Array<{
     sessionSource?: string;
-    activeUsers?: string;
+    sessions?: string;
     sharePercent?: number;
   }>;
   dailyMetrics?: Array<{
     date?: string;
-    activeUsers?: string;
+    sessions?: string;
     averageSessionDuration?: string;
     bounceRate?: string;
   }>;
   dailySourceBreakdown?: Array<{
     date?: string;
     sessionSource?: string;
-    activeUsers?: string;
+    sessions?: string;
   }>;
   error?: string;
 };
@@ -73,6 +73,7 @@ export default function Home() {
   const [startDate, setStartDate] = useState(defaultStartDate);
   const [endDate, setEndDate] = useState(defaultEndDate);
   const [includeProduct, setIncludeProduct] = useState(true);
+  const [apiToken, setApiToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DashboardResponse | null>(null);
@@ -97,7 +98,12 @@ export default function Home() {
     setError(null);
 
     try {
-      const response = await fetch(requestUrl);
+      const headers = new Headers();
+      if (apiToken.trim()) {
+        headers.set("X-API-KEY", apiToken.trim());
+      }
+
+      const response = await fetch(requestUrl, { headers });
       const data = (await response.json()) as DashboardResponse;
 
       if (!response.ok) {
@@ -162,6 +168,17 @@ export default function Home() {
               </label>
             </div>
 
+            <label className={styles.field}>
+              <span>API Token</span>
+              <input
+                type="password"
+                value={apiToken}
+                onChange={e => setApiToken(e.target.value)}
+                placeholder="ZEROFEE_API_TOKEN"
+                autoComplete="off"
+              />
+            </label>
+
             <div className={styles.actions}>
               <button type="submit" disabled={loading}>
                 {loading ? "조회 중..." : "조회"}
@@ -176,7 +193,7 @@ export default function Home() {
         <section className={styles.grid}>
           <article className={styles.card}>
             <span>방문자 수</span>
-            <strong>{formatNumber(result?.summary?.activeUsers)}</strong>
+            <strong>{formatNumber(result?.summary?.sessions)}</strong>
           </article>
           <article className={styles.card}>
             <span>평균 체류 시간</span>
@@ -201,10 +218,10 @@ export default function Home() {
           <div className={styles.sourceList}>
             {(result?.trafficSources ?? []).length > 0 ? (
               result?.trafficSources?.map(item => (
-                <div className={styles.sourceRow} key={`${item.sessionSource}-${item.activeUsers}`}>
+                <div className={styles.sourceRow} key={`${item.sessionSource}-${item.sessions}`}>
                   <div>
                     <strong>{item.sessionSource ?? "-"}</strong>
-                    <span>{formatNumber(item.activeUsers)}명</span>
+                    <span>{formatNumber(item.sessions)}명</span>
                   </div>
                   <div className={styles.sourceMetric}>
                     <span>{formatRate(item.sharePercent)}</span>
@@ -241,7 +258,7 @@ export default function Home() {
                   result?.dailyMetrics?.map(row => (
                     <tr key={row.date}>
                       <td>{row.date ?? "-"}</td>
-                      <td>{formatNumber(row.activeUsers)}</td>
+                      <td>{formatNumber(row.sessions)}</td>
                       <td>{formatDuration(row.averageSessionDuration)}</td>
                       <td>{formatRate(row.bounceRate)}</td>
                     </tr>

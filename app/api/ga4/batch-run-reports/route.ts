@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireApiToken } from '@/lib/api-auth';
 import { getGa4Client, getPropertyId } from '@/lib/ga4';
 import type { BatchRunReportsRequest, BatchRunReportsResponse } from '@/lib/ga4-reports';
 
@@ -13,6 +14,9 @@ async function readJsonBody(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const authError = requireApiToken(req);
+  if (authError) return authError;
+
   const body = (await readJsonBody(req)) as BatchRunReportsRequest | null;
 
   if (!body || !Array.isArray(body.requests) || body.requests.length === 0) {

@@ -6,6 +6,17 @@ The app expects these environment variables:
 
 - `GA4_PROPERTY_ID`
 - `GA4_SERVICE_ACCOUNT_JSON`
+- `ZEROFEE_API_TOKEN`
+
+Protected GA4 routes require one of these headers:
+
+```text
+X-API-KEY: <ZEROFEE_API_TOKEN>
+```
+
+```text
+Authorization: Bearer <ZEROFEE_API_TOKEN>
+```
 
 Available routes:
 
@@ -36,6 +47,13 @@ Single-call dashboard example:
 
 ```text
 /api/ga4/dashboard?creator_id=abc&product_id=123&start_date=2026-04-01&end_date=2026-04-24
+```
+
+With token:
+
+```bash
+curl -H "X-API-KEY: <ZEROFEE_API_TOKEN>" \
+  "https://zerofee-api.vercel.app/api/ga4/dashboard?creator_id=abc&product_id=123&start_date=2026-04-01&end_date=2026-04-24"
 ```
 
 ## Event Shape

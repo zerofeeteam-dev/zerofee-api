@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { protos } from '@google-analytics/data';
+import { requireApiToken } from '@/lib/api-auth';
 import { getGa4Client, getPropertyId } from '@/lib/ga4';
 import type { BatchRunReportsRequest, BatchRunReportsResponse } from '@/lib/ga4-reports';
 import { buildDateRange, buildViewItemFilter, getStringParam, reportRowsToObjects, reportTotalsToObject, withSharePercent } from '@/lib/ga4-reports';
@@ -15,6 +16,9 @@ function getProductId(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const authError = requireApiToken(req);
+  if (authError) return authError;
+
   const creatorId = getCreatorId(req);
   const productId = getProductId(req);
   const startDate = getStringParam(req.nextUrl, 'start_date');
@@ -35,7 +39,7 @@ export async function GET(req: NextRequest) {
         {
           dateRanges: [dateRange],
           metrics: [
-            { name: 'activeUsers' },
+            { name: 'sessions' },
             { name: 'averageSessionDuration' },
             { name: 'bounceRate' },
           ],
@@ -45,7 +49,7 @@ export async function GET(req: NextRequest) {
         {
           dateRanges: [dateRange],
           dimensions: [{ name: 'sessionSource' }],
-          metrics: [{ name: 'activeUsers' }],
+          metrics: [{ name: 'sessions' }],
           dimensionFilter: viewItemFilter,
         },
     ],
@@ -60,7 +64,7 @@ export async function GET(req: NextRequest) {
   const summaryReport = response.reports?.[0];
   const sourceReport = response.reports?.[1];
 
-  const summaryTotals = reportTotalsToObject(summaryReport, ['activeUsers', 'averageSessionDuration', 'bounceRate']);
+  const summaryTotals = reportTotalsToObject(summaryReport, ['sessions', 'averageSessionDuration', 'bounceRate']);
 
   return NextResponse.json({
     propertyId,
@@ -72,7 +76,7 @@ export async function GET(req: NextRequest) {
       eventName: 'view_item',
     },
     summary: summaryTotals,
-    trafficSources: withSharePercent(reportRowsToObjects(sourceReport, ['sessionSource'], ['activeUsers'])).filter(
+    trafficSources: withSharePercent(reportRowsToObjects(sourceReport, ['sessionSource'], ['sessions'])).filter(
       row => Boolean(row.sessionSource)
     ),
   });

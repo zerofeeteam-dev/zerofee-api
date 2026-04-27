@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { protos } from '@google-analytics/data';
+import { requireApiToken } from '@/lib/api-auth';
 import { getGa4Client, getPropertyId } from '@/lib/ga4';
 import {
   BatchRunReportsRequest,
@@ -12,6 +13,9 @@ import {
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
+  const authError = requireApiToken(req);
+  if (authError) return authError;
+
   const creator = getStringParam(req.nextUrl, 'creator');
   const startDate = getStringParam(req.nextUrl, 'start_date') ?? '30daysAgo';
   const endDate = getStringParam(req.nextUrl, 'end_date') ?? 'today';
@@ -27,7 +31,7 @@ export async function GET(req: NextRequest) {
       {
         dateRanges: [{ startDate, endDate }],
         dimensions: [{ name: 'pagePath' }],
-        metrics: [{ name: 'activeUsers' }, { name: 'userEngagementDuration' }],
+        metrics: [{ name: 'sessions' }, { name: 'userEngagementDuration' }],
         dimensionFilter: {
           filter: {
           fieldName: 'pagePath',
@@ -44,7 +48,7 @@ export async function GET(req: NextRequest) {
             {
               dateRanges: [{ startDate, endDate }],
               dimensions: [{ name: 'pagePath' }],
-              metrics: [{ name: 'activeUsers' }],
+              metrics: [{ name: 'sessions' }],
               dimensionFilter: {
                 filter: {
                   fieldName: 'pagePath',
@@ -61,7 +65,7 @@ export async function GET(req: NextRequest) {
       {
         dateRanges: [{ startDate, endDate }],
         dimensions: [{ name: 'sessionSource' }],
-        metrics: [{ name: 'activeUsers' }],
+        metrics: [{ name: 'sessions' }],
         dimensionFilter: {
           filter: {
           fieldName: 'pagePath',
@@ -88,11 +92,11 @@ export async function GET(req: NextRequest) {
       paymentSuccessPath,
     },
     aggregatedData: {
-      creatorPages: reportRowsToObjects(creatorReport, ['pagePath'], ['activeUsers', 'userEngagementDuration']),
-      creatorTotals: reportTotalsToObject(creatorReport, ['activeUsers', 'userEngagementDuration']),
-      paymentSuccessPages: reportRowsToObjects(paymentReport, ['pagePath'], ['activeUsers']),
-      paymentSuccessTotals: reportTotalsToObject(paymentReport, ['activeUsers']),
-      trafficSources: reportRowsToObjects(sourceReport, ['sessionSource'], ['activeUsers']),
+      creatorPages: reportRowsToObjects(creatorReport, ['pagePath'], ['sessions', 'userEngagementDuration']),
+      creatorTotals: reportTotalsToObject(creatorReport, ['sessions', 'userEngagementDuration']),
+      paymentSuccessPages: reportRowsToObjects(paymentReport, ['pagePath'], ['sessions']),
+      paymentSuccessTotals: reportTotalsToObject(paymentReport, ['sessions']),
+      trafficSources: reportRowsToObjects(sourceReport, ['sessionSource'], ['sessions']),
     },
   });
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { protos } from '@google-analytics/data';
+import { requireApiToken } from '@/lib/api-auth';
 import { getGa4Client, getPropertyId } from '@/lib/ga4';
 import type { BatchRunReportsRequest, BatchRunReportsResponse } from '@/lib/ga4-reports';
 import {
@@ -24,6 +25,9 @@ function getProductId(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const authError = requireApiToken(req);
+  if (authError) return authError;
+
   const creatorId = getCreatorId(req);
   const productId = getProductId(req);
   const startDate = getStringParam(req.nextUrl, 'start_date');
@@ -44,7 +48,7 @@ export async function GET(req: NextRequest) {
       {
         dateRanges: [dateRange],
         metrics: [
-          { name: 'activeUsers' },
+          { name: 'sessions' },
           { name: 'averageSessionDuration' },
           { name: 'bounceRate' },
         ],
@@ -54,14 +58,14 @@ export async function GET(req: NextRequest) {
       {
         dateRanges: [dateRange],
         dimensions: [{ name: 'sessionSource' }],
-        metrics: [{ name: 'activeUsers' }],
+        metrics: [{ name: 'sessions' }],
         dimensionFilter: viewItemFilter,
       },
       {
         dateRanges: [dateRange],
         dimensions: [{ name: 'date' }],
         metrics: [
-          { name: 'activeUsers' },
+          { name: 'sessions' },
           { name: 'averageSessionDuration' },
           { name: 'bounceRate' },
         ],
@@ -71,7 +75,7 @@ export async function GET(req: NextRequest) {
       {
         dateRanges: [dateRange],
         dimensions: [{ name: 'date' }, { name: 'sessionSource' }],
-        metrics: [{ name: 'activeUsers' }],
+        metrics: [{ name: 'sessions' }],
         dimensionFilter: viewItemFilter,
         orderBys: [{ dimension: { dimensionName: 'date' } }],
       },
@@ -87,10 +91,10 @@ export async function GET(req: NextRequest) {
   const sourceReport = response.reports?.[1];
   const dailySummaryReport = response.reports?.[2];
   const dailySourceReport = response.reports?.[3];
-  const trafficSources = withSharePercent(reportRowsToObjects(sourceReport, ['sessionSource'], ['activeUsers'])).filter(
+  const trafficSources = withSharePercent(reportRowsToObjects(sourceReport, ['sessionSource'], ['sessions'])).filter(
     row => Boolean(row.sessionSource)
   );
-  const dailyMetrics = fillDailyRows(dailySummaryReport, dateRange, ['activeUsers', 'averageSessionDuration', 'bounceRate']);
+  const dailyMetrics = fillDailyRows(dailySummaryReport, dateRange, ['sessions', 'averageSessionDuration', 'bounceRate']);
   const dailySourceBreakdown = fillDailySourceRows(
     dailySourceReport,
     dateRange,
@@ -108,7 +112,7 @@ export async function GET(req: NextRequest) {
       productId,
       eventName: 'view_item',
     },
-    summary: reportTotalsToObject(summaryReport, ['activeUsers', 'averageSessionDuration', 'bounceRate']),
+    summary: reportTotalsToObject(summaryReport, ['sessions', 'averageSessionDuration', 'bounceRate']),
     trafficSources,
     dailyMetrics,
     dailySourceBreakdown,
