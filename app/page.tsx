@@ -26,6 +26,7 @@ type DashboardResponse = {
   dailyMetrics?: Array<{
     date?: string;
     sessions?: string;
+    transactions?: string;
     averageSessionDuration?: string;
     bounceRate?: string;
   }>;
@@ -254,6 +255,7 @@ export default function Home() {
                 <tr>
                   <th>날짜</th>
                   <th>방문자 수</th>
+                  <th>구매자 수</th>
                   <th>평균 체류 시간</th>
                   <th>페이지 이탈율</th>
                 </tr>
@@ -264,13 +266,14 @@ export default function Home() {
                     <tr key={row.date}>
                       <td>{row.date ?? "-"}</td>
                       <td>{formatNumber(row.sessions)}</td>
+                      <td>{formatNumber(row.transactions)}</td>
                       <td>{formatDuration(row.averageSessionDuration)}</td>
                       <td>{formatRate(row.bounceRate)}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={4} className={styles.emptyCell}>
+                    <td colSpan={5} className={styles.emptyCell}>
                       조회 결과가 없으면 여기에 일별 데이터가 표시됩니다.
                     </td>
                   </tr>

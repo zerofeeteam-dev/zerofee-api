@@ -67,6 +67,7 @@ export async function GET(req: NextRequest) {
         dimensions: [{ name: 'date' }],
         metrics: [
           { name: 'sessions' },
+          { name: 'transactions' },
           { name: 'averageSessionDuration' },
           { name: 'bounceRate' },
         ],
@@ -95,7 +96,7 @@ export async function GET(req: NextRequest) {
   const trafficSources = withSharePercent(reportRowsToObjects(sourceReport, ['sessionSource'], ['sessions'])).filter(
     row => Boolean(row.sessionSource)
   );
-  const dailyMetrics = fillDailyRows(dailySummaryReport, dateRange, ['sessions', 'averageSessionDuration', 'bounceRate']);
+  const dailyMetrics = fillDailyRows(dailySummaryReport, dateRange, ['sessions', 'transactions', 'averageSessionDuration', 'bounceRate']);
   const dailySourceBreakdown = fillDailySourceRows(
     dailySourceReport,
     dateRange,
