@@ -14,6 +14,7 @@ type DashboardResponse = {
   };
   summary?: {
     sessions?: string;
+    transactions?: string;
     averageSessionDuration?: string;
     bounceRate?: string;
   };
@@ -194,6 +195,10 @@ export default function Home() {
           <article className={styles.card}>
             <span>방문자 수</span>
             <strong>{formatNumber(result?.summary?.sessions)}</strong>
+          </article>
+          <article className={styles.card}>
+            <span>구매자 수</span>
+            <strong>{formatNumber(result?.summary?.transactions)}</strong>
           </article>
           <article className={styles.card}>
             <span>평균 체류 시간</span>

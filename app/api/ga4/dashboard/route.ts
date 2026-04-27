@@ -49,6 +49,7 @@ export async function GET(req: NextRequest) {
         dateRanges: [dateRange],
         metrics: [
           { name: 'sessions' },
+          { name: 'transactions' },
           { name: 'averageSessionDuration' },
           { name: 'bounceRate' },
         ],
@@ -112,7 +113,7 @@ export async function GET(req: NextRequest) {
       productId,
       eventName: 'view_item',
     },
-    summary: reportTotalsToObject(summaryReport, ['sessions', 'averageSessionDuration', 'bounceRate']),
+    summary: reportTotalsToObject(summaryReport, ['sessions', 'transactions', 'averageSessionDuration', 'bounceRate']),
     trafficSources,
     dailyMetrics,
     dailySourceBreakdown,
